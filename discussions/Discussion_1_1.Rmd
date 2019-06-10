@@ -1,0 +1,65 @@
+---
+title: "Youtube Recommender System"
+author: "Olga Shiligin"
+date: "06/06/2019"
+output: html_document
+---
+
+Youtube Recommender System
+---------------------------
+
+YouTube recommendations are driven by Google Brain, which was recently opensourced as TensorFlow. By using TensorFlow one can experiment with different deep neural network architectures using distributed training. It is considered that non-linear combinations of features may yield a better prediction than a traditional matrix factorization approach can.
+
+There were two main factors behind YouTube’s Deep Learning approach towards Recommender Systems:
+
+- Scale: Due to the immense sparsity of these matrices, it’s difficult for previous matrix factorization approaches to scale amongst the entire feature space. 
+
+- Consistency: Many other product-based teams at Google have switched to deep learning as a general framework for learning problems. 
+
+The system consists of two neural networks:
+
+- candidate generation ( this network generates recommendations:  takes as input user’s watch history and using collaborative filtering selects videos in the range of hundreds).
+
+- ranking( a second network ranks these generated recommendations uses logistic regression to score each video and then A/B testing is continuously used for further improvement). The objective of ranking network is to maximize the expected watch time for any given recommendation over probability of a click.
+
+Details of the youtube recommender system:
+
+- in order to get good recommendation user needs to start watching videos in "Recommended for you" section, as watching videos in "Suggested for you" does not contribute into the recommendation system and do not improve recommendation for the user.
+
+- the user should be a regular youtube user in order the recommendation system learns  his/her preferences.
+
+- the recommendation system gives priority to longer videos
+
+- the recommendation system objective is to maximize the expected watch time for any given recommendation over probability of a click
+
+- the recommendation system learns from a video’s early performance, and if it does well, views can grow rapidly
+
+- it also recommends more popular videos regardless of how popular the starting video was
+
+
+There are following inefficiencies in the youtube recommender system that were found:
+
+- the recommender system shows videos that user has already watched. This issue can not be applied to music or kids videos, which can be watched multiple times by the same user
+
+- the recommender system generates similar videos with expected topics narrowing down this way the diversity of the videos for the users.
+
+- "Not Interesting" button does not help recommendations as it seems does not work (similar videos still pop up).
+
+
+   Youtube recommender system aims to provide best watching experience for the user and tends to keep him/her as longer as possible. It seems that it does its job as youtube is the second most visited website in the US. Youtube recommender system is based on Deep Neural Networks and utilize the collaborative filtering and logistic regression techniques.The youtube recommender system designed is a such way that YouTube pushes an anonymous user toward more popular, not more fringe, content leaving the space for manipulation of users preferences. Youtube recommender system algorithm seems to have concluded that people are drawn to content that is more extreme than what they started with — or to incendiary content in general.
+
+
+Sources:
+--------
+--------
+
+https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/45530.pdf
+
+https://towardsdatascience.com/how-youtube-recommends-videos-b6e003a5ab2f
+
+https://www.theatlantic.com/technology/archive/2018/11/how-youtubes-algorithm-really-works/575212/
+
+https://www.nytimes.com/2018/03/10/opinion/sunday/youtube-politics-radical.html
+
+https://www.quora.com/How-does-YouTubes-recommendation-algorithm-work
+
