@@ -1,0 +1,61 @@
+---
+title: "Attacks On Recommender Systems"
+author: "Olga Shiligin"
+date: "06/06/2019"
+output: html_document
+---
+
+Introduction
+------------
+
+With the advancement of recommender systems, various techniques are employed to influence the output of recommender systems to promote or demote a particular
+product. Attacks are the inserting of bogus data into a recommendation system. Collaborative Filtering based Recommender Systems are the most sensitive systems to attacks in which malicious users insert fake profiles into the rating database in order to bias the system’s output (these types of attacks are known as profile injection or Shilling attacks). Purpose of the attacks can be different: to push(push attack)/decrease(nuke attack) some items' ratings by manipulating the recommender system, manipulation of the "Internet opinion" or simply to sabotage the system.
+
+The attacks technique is to create numerous fake accounts / profiles and issue high or low ratings to the "target item".
+
+The general description of the profile of a true user and fake user are characterized  as 80% unrated items and 20% rated items for the "true" profile" , whrereas "fake"" profile consists of 20% unrated items and 80% rated (target items + selected items + filler items). From above description of trusted and fake user profile it is
+clear that to attack a recommender system, attack profile need to be designed as statistically identical to genuine profile as possible.
+
+Types Of Attacks
+
+- Random Attack: take random values for filler items, high/low ratings for target items.
+- Average Attack: attack profiles are generated such that the rating for filler items is the mean or average rating for that item across all the users in the
+database.
+- Segment Attack: the segment attack model is to make inserted bots more similar to the segment market users - to push the item within the relevant community.
+- Bandwagon attack: profiles are generated such that besides giving high ratings to the target items, it also contains only high values for selected items and random values to some filler items .
+- User Shifting: In these types of attacks we basically increment or decrement all ratings for a subset of items per attack profile by a constant amount so as to reduce the similarity between attack profiles.
+- Mixed Attack: In Mixed Attack, attack is on the same target item but that attack is produced from different attack modules.
+- Noise Injection: This type of attack is carried out by adding some noise to ratings according to a standard normal distribution multiplied by a constant, β, which is used to govern the amount of noise to be added. 
+
+To reduce this risk, various detection techniques have been proposed to detect such attacks, which use diverse features extracted from user profiles. Detection Techniques can be described as some descriptive statistics that can be used to capture some of the major characteristics that make an attacker’s profile look different from genuine user’s profile.
+
+- Rating Deviation from Mean Agreement (RDMA) can identify attackers by analysing the profile’s average deviation per item or user.
+- Weighted Deviation from Mean Agreement (WDMA) can help identify anomalies by placing a higher weight on rating deviations for sparse items.
+-  Length Variance (LengthVar) is used to capture how much the length of a given profile varies from average length in the dataset. It is particularly effective in
+detecting attacks with large filler sizes.
+- Degree of Similarity with Top Neighbours (DegSim) is used to capture the average similarity of a profile’s k nearest neighbours.
+
+Countermeasures
+
+- Increase profile injection costs (Captchas, Low‐cost manual insertion)
+- Use statistical attack detection methods (detect groups of users who collaborate to push/nuke items, monitor development of ratings for an item: changes in average rating, in rating entrophy; use ML to detect fake profiles).
+
+Example of recommender system attacks:
+
+Amazon product's reviews is distorted with thousands of fake ones. False reviews were helping unknown brands dominate searches for popular items. Hundreds of unverified five-star reviews were being posted on product pages in a single day. Many product pages also included positive reviews for completely different items.
+
+Sources:
+
+https://pdfs.semanticscholar.org/5c7e/96dcaf253f37904f91fdb6fdd6f486dba134.pdf
+
+https://www.math.uci.edu/icamp/courses/math77b/lecture_12w/pdfs/Chapter%2009%20-%20Attacks%20on%20collaborative%20recommender%20systems.pdf
+
+https://arxiv.org/pdf/1506.05752.pdf
+
+https://www.cnbc.com/2019/04/16/amazon-flooded-with-thousands-of-fake-reviews-report-claims.html
+
+https://www.researchgate.net/publication/220886806_Social_Manipulation_of_Online_Recommender_Systems
+
+http://www.ijarcs.info/index.php/Ijarcs/article/viewFile/4550/4100
+
+
