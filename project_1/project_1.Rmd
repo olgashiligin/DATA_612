@@ -1,0 +1,138 @@
+---
+title: "Project 1"
+author: "Olga Shiligin"
+date: "30/05/2019"
+output: html_document
+---
+
+This system recommends scents to buyers. Each scent is given a score on the scale from 0 to 10. This is a toy data set with 7 scents and 10 buyers.
+
+```{r, echo=F, message=F, warning=F, error=F, comment=F}
+library(naniar)
+library(ggplot2)
+library(dplyr)
+library(caTools)
+```
+
+```{r}
+# reading training data (extracted values for the test data set has been replaced with NAs)
+train.data = read.csv("train")
+train.data
+
+# reading test data extracted from training data
+test.data = read.csv("test")
+test.data
+```
+
+Calculating the raw average rating for every user-item combination (training set).
+
+```{r}
+# creating matrix with only numeric values or NAs
+data.numcols.train <- data.matrix(train.data[, sapply(train.data, is.numeric)])
+data.numcols.test <- data.matrix(test.data[, sapply(test.data, is.numeric)])
+
+# calculating raw average rating for every user-item combination.
+raw_avg = function(df){
+  
+ sum(apply(df, 2, function(x) sum(x, na.rm = TRUE)))/length(which(!is.na(df)))
+  
+}
+# raw average rating (training set)
+raw_avg_train = raw_avg(data.numcols.train)
+raw_avg_train
+```
+
+```{r}
+# Calculate the RMSE for raw average for both your training data and your test data.
+
+RMSE_raw_avg = function(df, raw_avg_df){
+  sqrt(mean(((df - raw_avg_df)^2), na.rm=TRUE))
+}
+
+# the RMSE for raw average for training set
+RMSE_raw_avg(data.numcols.train,raw_avg_train)
+
+# the RMSE for raw average for test set
+RMSE_raw_avg(data.numcols.test,raw_avg_train)
+```
+
+
+```{r}
+#  calculating the bias for each user and each item (training set)
+bias_scent = function(df){
+  colMeans(df, na.rm=TRUE) - raw_avg(df)
+  
+}
+
+# the bias for each item (training set)
+bias_scent(data.numcols.train)
+
+
+bias_buyer = function(df){
+  rowMeans(df, na.rm=TRUE) - raw_avg(df)
+  
+}
+
+# the bias for each buyer (training set)
+bias_buyer(data.numcols.train)
+
+
+```
+
+```{r}
+# calculating the baseline predictors for every user-item combination
+
+baseline = function(df, nc, nr){
+  
+baseline_mtrx<- matrix(ncol=nc,nrow=nr) 
+i =1
+j =1
+coll_bias_scent = bias_scent(df)
+coll_bias_buyer = bias_buyer(df)
+for(i in (1:length(coll_bias_scent))) {
+  for(j in (1: length(coll_bias_buyer))) {
+    baseline_mtrx[j,i] = raw_avg_train + coll_bias_scent[i]+coll_bias_buyer[j]
+}
+}
+baseline_mtrx
+}
+
+#  the baseline predictors for every user-item combination
+
+baseline_train_set = baseline(data.numcols.train, 7,10)
+colnames(baseline_train_set)<-c("scent1","scent2","scent3","scent4","scent5","scent6","scent7")
+rownames(baseline_train_set)<-c("buyer1","buyer2","buyer3","buyer4","buyer5","buyer6","buyer7","buyer8","buyer9","buyer10")
+baseline_train_set
+
+baseline_test_set<-baseline_train_set[3:6,2:5]
+baseline_test_set
+
+```
+
+```{r}
+# the RMSE for the baseline predictors for training data
+
+# Calculate the RMSE for raw average for both your training data and your test data.
+
+RMSE_baseline = function(df, baseline_df){
+  sqrt(mean(((df - baseline_df)^2), na.rm=TRUE))
+}
+
+# the RMSE for raw average for training set
+RMSE_baseline(data.numcols.train,baseline_train_set)
+
+# the RMSE for the baseline predictors for test data 
+RMSE_baseline(data.numcols.test,baseline_test_set)
+```
+
+```{r}
+#  summarizing results
+m0<-cbind(RMSE_RAW_AVG_TRAIN=RMSE_raw_avg(data.numcols.train,raw_avg_train),RMSE_BASELINE_TRAIN=RMSE_baseline(data.numcols.train,baseline_train_set), improvemets_pct = round((1-(RMSE_baseline(data.numcols.train,baseline_train_set)/RMSE_raw_avg(data.numcols.train,raw_avg_train))),3)*100)
+m1<-cbind(RMSE_RAW_AVG_TEST=RMSE_raw_avg(data.numcols.test,raw_avg_train),RMSE_BASELINE_TEST=RMSE_baseline(data.numcols.test,baseline_test_set), improvemets_pct = round((1-(RMSE_baseline(data.numcols.test,baseline_test_set)/RMSE_raw_avg(data.numcols.test,raw_avg_train))),3)*100)
+
+summary = rbind(m0, m1)
+rownames(summary) <- c("training set","test set")
+summary
+```
+
+RMSE is lower for the baseline predictor compare to raw average predictor: 40% improvements on the training set and 10% on the test set.
