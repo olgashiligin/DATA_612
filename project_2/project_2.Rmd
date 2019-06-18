@@ -34,7 +34,7 @@ dim(movie_matrix)
 #  alternative way to load MovieLense dataset from the link https://grouplens.org/datasets/movielens/
 
 # reading data
-# ratings = read.csv("/Users/Olga/Desktop/ml-latest-small/ratings.csv")
+# ratings = read.csv("https://raw.githubusercontent.com/olgashiligin/DATA_612/master/project_2/ratings.csv")
 
 # transforming to a wide format 
 # data<-ratings%>% select (movieId, userId, rating) %>% spread (movieId,rating)
