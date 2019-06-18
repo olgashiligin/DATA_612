@@ -16,11 +16,11 @@ library(caTools)
 
 ```{r}
 # reading training data (extracted values for the test data set has been replaced with NAs)
-train.data = read.csv("train")
+train.data = read.csv("https://raw.githubusercontent.com/olgashiligin/DATA_612/master/project_1/train")
 train.data
 
 # reading test data extracted from training data
-test.data = read.csv("test")
+test.data = read.csv("https://raw.githubusercontent.com/olgashiligin/DATA_612/master/project_1/test")
 test.data
 ```
 
