@@ -1,0 +1,283 @@
+---
+title: "Project_2"
+author: "Olga Shiligin"
+date: "13/06/2019"
+output: html_document
+---
+
+Introduction 
+-------------
+
+The purpose of the project is to implement recommendation algorithms for an existing dataset of user-item ratings. The data for the project is taken from MovieLens and downloaded from https://grouplens.org/datasets/movielens/. The dataset contains about 10000 users and 610 movies, which were rated by users on the scale from 1 to 5. User-based and Item-based collaborative filtering will be employed in this project.
+
+"recommenderLab" package will be used as a core packge for building a recommender algorithms.
+
+```{r, echo=F, message=F, warning=F, error=F, comment=F}
+library(recommenderlab)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+Data Exploration
+-----------------
+
+Reading data and making necessary transformations. We can use MovieLense data set from recommenderLab (quicker to test code) or use the full version from https://grouplens.org/datasets/movielens/.
+
+
+```{r}
+# reading data (RecommenderLab contains the sample of MovieLense data set)
+
+data(MovieLense)
+movie_matrix<-MovieLense
+dim(movie_matrix)
+#  alternative way to load MovieLense dataset from the link https://grouplens.org/datasets/movielens/
+
+# reading data
+# ratings = read.csv("/Users/Olga/Desktop/ml-latest-small/ratings.csv")
+
+# transforming to a wide format 
+# data<-ratings%>% select (movieId, userId, rating) %>% spread (movieId,rating)
+
+#  converting the data set into a real rating matrix
+# movie_matrix <- as(as.matrix(data[-c(1)]), "realRatingMatrix")
+
+```
+
+
+
+```{r}
+#  looking at the matrix structure and ferst 5 rows of the real rating matrix
+str(movie_matrix)
+head(movie_matrix@data [1:5,1:5])
+
+#  looking at the rating provided by user 1 and 100 for the first 5 movies
+movie_matrix@data[1,1:5]
+movie_matrix@data[100, 1:5]
+```
+
+The matrix contains 1664 movies and 943 users. 99392 ratings in total (the matrix is sparse).
+
+```{r}
+# looking at the number of movies the 100's user has rated
+length(movie_matrix@data[100,][movie_matrix@data[100,] > 0])
+
+#  checking total number of ratings given by the users
+nratings(movie_matrix)
+
+#  overall rating distribution
+hist(getRatings(movie_matrix), main = "Distribution Of Ratings", xlim=c(0,5), breaks="FD")
+```
+
+The most popular rating is 4.
+
+```{r}
+#  finding the most/least popular movies
+ratings_binary<-binarize(movie_matrix, minRating = 1)
+ratings_binary
+ratings_sum<-colSums(ratings_binary)
+ratings_sum_df<- data.frame(movie = names(ratings_sum), pratings = ratings_sum)
+head(ratings_sum_df[order(-ratings_sum_df$pratings), ],10)
+tail(ratings_sum_df[order(-ratings_sum_df$pratings), ],10)
+```
+
+
+Normalization
+-------------
+
+ Two normalization techniques are going to be implemented: 
+
+1. Centering 
+
+   - it removes the row bias by substructing row mean value from all row values
+   - makes mean - 0
+   - does not change the scale of variable
+   - used if all variables in a data set are measured in same scale.
+
+2. Z-score
+   
+   - obtained by substructing mean from individual scores and dividing it by standard deviation
+   - scaling data AND changes scale
+   - used when variables are measured in a different scale
+   
+   
+```{r}
+data.norm.c<-normalize(movie_matrix, method="center")
+data.norm.z<-normalize(movie_matrix, method="Z-score")
+
+#  ploting rating distribution for Raw, Normalized and Z-score Normalized Ratings 
+par(mfrow = c(3,1))
+plot(density(getRatings(movie_matrix)),main = 'Raw')
+plot(density(getRatings(data.norm.c)),main = 'Normalized')
+plot(density(getRatings(data.norm.z)),main = 'Z-score')
+par(mfrow = c(1,1))
+```
+
+From the plots we can see that using normalization techniques we have brought the data close to the normal distribution from it's original distribution.
+
+
+User-based collaborative filtering
+----------------------------------
+
+- Similar users will have similar movie tastes
+
+- It is a memory based model as loads whole rating matrix into memory
+
+User-based collaborative filtering is a two-step process: first step is the finding for a given user his neighbours (using similarity measures such as Pearson coefficient or Cosine distance). For item not rated by user, we use average rating of that item of user's neighbours.
+
+Now I am going to build user-based models employing two types of normalization techniques and two types of similarity measures: Pearson coefficient or Cosine distance.
+
+Cross-validation scheme will be used to evaluate the models' performance.
+
+
+```{r}
+#  creating evaluation scheme (5-fold CV; everything that is above 3 is considered a good rating; 5 neighbours will be find for a given user(item) to make recommendation)
+set.seed(123)
+es<- evaluationScheme(movie_matrix, method = "cross", train = 0.9, given = 5, goodRating = 3, k = 5)
+
+#  building a recommendation using raw data and Pearson coefficient as a similarity measure to find neighbours
+param1 = list(normalize = NULL, method = "Pearson")
+result_1<- evaluate(es, method = "UBCF",  param = param1, type = "ratings")
+avg(result_1)
+
+#  building a recommendation using normalized data (centering) and Pearson coefficient as a similarity measure to find neighbours
+param2 = list(normalize = "center", method = "Pearson")
+result_2<-evaluate(es, method = "UBCF", param = param2, type = "ratings")
+avg(result_2)
+
+#  building a recommendation using normalized data (Z-score) and Pearson coefficient as a similarity measure to find neighbours
+param3 = list(normalize = "Z-score", method = "Pearson")
+result_3<-evaluate(es, method = "UBCF", param = param3, type = "ratings")
+avg(result_3)
+
+# Cosine similarity
+
+#  building a recommendation using raw data and Cosine distance as a similarity measure to find neighbours
+param4 = list(method = "Cosine")
+result_4<- evaluate(es, method = "UBCF", param = param4, type = "ratings")
+avg(result_4)
+
+#  building a recommendation using normalized data (centering) and Cosine distance as a similarity measure to find neighbours
+param5 = list(normalize = "center", method = "Cosine")
+result_5<-evaluate(es, method = "UBCF", param = param5, type = "ratings")
+avg(result_5)
+
+#  building a recommendation using normalized data (Z-score) and Cosine distance as a similarity measure to find neighbours
+param6 = list(normalize = "Z-score", method = "Cosine")
+result_6<-evaluate(es, method = "UBCF", param = param6, type = "ratings")
+avg(result_6)
+```
+
+Models' performance is been summarized below:
+
+```{r}
+m1<-cbind(RMSE=avg(result_1))
+m2<-cbind(RMSE=avg(result_2))
+m3<-cbind(RMSE=avg(result_3))
+m4<-cbind(RMSE=avg(result_4))
+m5<-cbind(RMSE=avg(result_5))
+m6<-cbind(RMSE=avg(result_6))
+
+
+summary = rbind(m1, m2, m3, m4, m5, m6)
+rownames(summary) <- c("model_1","model_2", "model_3", "model_4", "model_5", "model_6")
+summary
+
+```
+
+The best performed model in terms of lowest RMSE is model 3 which uses Person similarity measure and Z-score normalized data. Let's look at the confusion matrix and ROC curve for that model for 5, 10 or 15 recommendations.
+
+```{r}
+param3 = list(normalize = "Z-score", method = "Pearson")
+result_3<-evaluate(es, method = "UBCF", param = param3, type = "topNList", n = c(5,10,15))
+avg(result_3)
+
+plot(result_3, annotate = TRUE, main = "ROC curve (model 3)")
+```
+
+
+Item-based (model-based) collaborative filtering
+------------------------------------------------
+
+- users will prefer those products similar to ones they have already rated
+
+- this method explorers the relationship between items
+
+- for each item top n items are stored (rather then storing all the items for an efficiency purposes) based on similarity measures (Cosine or Pearson). Weighted sum is used to finally make recommendation for user.
+
+Now I am going to build item-based models employing two types of normalization techniques and two types of similarity measures: Pearson coefficient or Cosine distance.
+
+Cross-validation scheme will be used to evaluate the models' performance.
+
+
+```{r}
+#  building a recommendation using raw data and Pearson coefficient as a similarity measure to find neighbours
+param7 = list(normalize = NULL, method = "Pearson")
+result_7<-evaluate(es, method = "IBCF", param = param7, type = "ratings")
+avg(result_7)
+
+#  building a recommendation using normalized data (centering) and Pearson coefficient as a similarity measure to find neighbours
+param8 = list(normalize = "center", method = "Pearson")
+result_8<-evaluate(es, method = "IBCF", param = param8, type = "ratings")
+avg(result_8)
+
+#  building a recommendation using normalized data (Z-score) and Pearson coefficient as a similarity measure to find neighbours
+param9 = list(normalize = "Z-score", method = "Pearson")
+result_9<-evaluate(es, method = "IBCF", param = param9, type = "ratings")
+avg(result_9)
+
+
+# Cosine similarity
+
+#  building a recommendation using raw data and Cosine similarity as a similarity measure to find neighbours
+param10 = list(method = "Cosine")
+result_10<- evaluate(es, method = "IBCF", param = param10, type = "ratings")
+avg(result_10)
+
+#  building a recommendation using normalized data (centering) and Cosine similarity as a similarity measure to find neighbours
+param11 = list(normalize = "center", method = "Cosine")
+result_11<-evaluate(es, method = "IBCF", param = param11, type = "ratings")
+avg(result_11)
+
+#  building a recommendation using normalized data (Z-score) and Cosine similarity as a similarity measure to find neighbours
+param12 = list(normalize = "Z-score", method = "Cosine")
+result_12<-evaluate(es, method = "IBCF", param = param12, type = "ratings")
+avg(result_12)
+```
+
+Models' performance is been summarized below:
+
+```{r}
+m7<-cbind(RMSE=avg(result_7))
+m8<-cbind(RMSE=avg(result_8))
+m9<-cbind(RMSE=avg(result_9))
+m10<-cbind(RMSE=avg(result_10))
+m11<-cbind(RMSE=avg(result_11))
+m12<-cbind(RMSE=avg(result_12))
+
+summary2 = rbind(m7, m8, m9, m10, m11, m12)
+rownames(summary2) <- c("model_7","model_8", "model_9", "model_10", "model_11", "model_12")
+summary2
+```
+
+The best model is model 10 and model 11 which was build using Cosine similarity measure.
+
+Let's look at the confusion matrix and ROC curve of model 10 for 5, 10 or 15 recommendations. 
+
+```{r}
+param10 = list(method = "Cosine")
+result_10<- evaluate(es, method = "IBCF", param = param10, type = "topNList", n = c(5,10,15))
+avg(result_10)
+
+plot(result_10, annotate = TRUE, main = "ROC curve (model 10)")
+```
+
+As we see model_10 performs slightly worse that the best model (model_3) of user-based approach.
+
+In general, the user-based models performed slightly better than item-based models, but this approach requires more memory.
+
+
+
+
+
+
