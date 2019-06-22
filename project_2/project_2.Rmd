@@ -276,7 +276,23 @@ As we see model_10 performs slightly worse that the best model (model_3) of user
 
 In general, the user-based models performed slightly better than item-based models, but this approach requires more memory.
 
+Let's build the complete model (user-based recommendation model using Pearson coefficient) and make recommendations.
 
+```{r}
+# splitting data on train and test sets
+esf<- evaluationScheme(movie_matrix, method = "split", train = 0.9, given = 5, goodRating = 3)
+train <-getData(esf, "train")
+test <-getData(esf, "unknown")
+test_known <- getData(esf, "known")
+#  building user-based recommendation model
+param_f<- list (method = "Pearson", nn=10)
+final_model <- Recommender(train, method = "UBCF", param = param_f)
+final_model
+# getting recommendations (top 10)
+final_prediction<- predict (final_model, test, n = 10, type = "topNList")
+final_prediction@items[1]
+final_prediction@ratings[1]
+```
 
 
 
