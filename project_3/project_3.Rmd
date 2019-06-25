@@ -1,0 +1,136 @@
+---
+title: "project 3"
+author: "Olga Shiligin"
+date: "22/06/2019"
+output: html_document
+---
+
+Introduction
+------------
+
+The purpose of the project is to implement latent-based approach to collaborative filtering.
+
+Latent factor approach leverages matrix factorization techniques to arrive at recommendations. A latent factor is not something that we observe in our data, rather, we infer it based on the value (ratings) given by the user to the item.
+Matrix Factorization (MF) or matrix decomposition is a method of splitting a matrix into a multiple matrices. The product of these matraces will produce the original matrix. Matrix Factorization is one of the most popular algorithms to solve co-clustering problem.
+
+The following methods of Latent factor approach will be considered in this project:
+
+- Singular Value Decomposition (SVD)
+- Funk SVD
+
+Apart from the methods listed above, user-based CF will be evaluated as well in order to assess the performance of all the methods.
+
+Singular Value Decomposition (SVD) is a matrix factorization technique to reduce the dimension of impute data.The idea is to find the direction of maximum variances and retain only those who can considerably explain variation in data. While SVD can achieve a very good result on non-sparse data, in real life SVD doesn't work so well on data - as real-life data is significantly sparse.
+SVD function in recommenderLab package uses column-mean as default method for missing values impute. This usually works OK, but results are usually biased.
+
+Funk SVD - implements matrix decomposition by the stochastic gradient descent optimization popularized by Simon Funk to minimize the error on the known values. Funk SVD ignores the missing values and compute latent factors only using the values we know. Conceptually, it is a simple iterative optimization process that assumes the existence of a cost function and arbitrary initial values for the optimization variables. Gradient descent has been shown to work well optimizing MF models. However, it is not a popular choice for an optimizer for MF if the dimensionality of the original rating matrix is high. In real life, this issue requires parallelization mechanism and a better exploitation of matrix factorizations unique cost function nature.
+
+
+```{r, echo=F, message=F, warning=F, error=F, comment=F}
+library(recommenderlab)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+
+```{r}
+# reading Data
+
+data(MovieLense)
+movie_matrix<-MovieLense
+```
+
+
+```{r}
+# creating evaluation scheme
+
+set.seed(123)
+
+# 5-fold CV; everything that is above 3 is considered a good rating; 5 neighbours will be find for a given user(item) to make recommendation
+es<- evaluationScheme(movie_matrix, method = "cross", train = 0.9, given = 5, goodRating = 3, k = 5)
+```
+
+Evaluating user-based CF approach with Pearson Coefficient as a similarity measure. This approach has demonstrated the best results in project 2.
+
+```{r}
+#  testing user-based CF using centered data and Pearson coefficient as a similarity measure to find neighbours
+
+param_ubcf<-list(normalize="center", method = "Cosine")
+result_1<- evaluate(es, method = "UBCF", type = "ratings", param = param_ubcf)
+avg(result_1)
+```
+
+
+```{r}
+#  testing SVD method using the following parametrs: k = 10, maxiter = 100, normalize = center
+
+param_svd = list(normalize="center", maxiter = 100, k =100)
+result_2<- evaluate(es, method = "SVD",  param = param_svd, type = "ratings")
+avg(result_2)
+```
+
+
+```{r}
+ # testing funk SVD method using the following paramentrs: k	 =  10, gamma	 =  0.015, lambda	 =  0.001, normalize	 =  center, min_epochs	 =  50, max_epochs	 =  200
+param_svdf<- list(normalize="center", k = 10, gamma	 =  0.015,lambda	 =  0.001, min_epochs	 =  50, max_epochs	 =  200)
+result_3<- evaluate(es, method = "SVDF", type = "ratings", param = param_svdf)
+avg(result_3)
+```
+
+Models' performance is been summarized below:
+
+```{r}
+m1<-cbind(RMSE=avg(result_1))
+m2<-cbind(RMSE=avg(result_2))
+m3<-cbind(RMSE=avg(result_3))
+
+summary = rbind(m1, m2, m3)
+rownames(summary) <- c("UBCF","SVD","FUNK SVD")
+summary
+```
+
+Funk SVD has the lowest RMSE compare to user-based and SVD methods, the difference is very small though.
+
+Let's look at the ROC curve of all three methods for 5, 10, 15 and 20 recommendations.
+
+```{r}
+
+algorithms <- list(
+
+  "user-based" = list(name="UBCF", param=list(normalize="center", method = "Cosine")),
+  "SVD" = list(name="SVD", param=list(normalize="center", maxiter = 100, k =100)),
+  "Funk SVD" = list(name = "SVDF", param = list(normalize="center", k = 10, gamma	 =  0.015,lambda	 =  0.001, min_epochs	 =  50, max_epochs	 =  200))
+  
+)
+
+results <- evaluate(es, algorithms, n=c(5, 10, 15, 20))
+
+plot(results, annotate = 1:4, legend="topleft", main = "ROC")
+
+```
+
+
+As we see user-based outperformed latent-based methods in terms of accuracy for the number of predictions more than 5.
+
+
+Let's build the complete model using SVD method and make recommendations.
+
+```{r}
+# splitting data on train and test sets
+esf<- evaluationScheme(movie_matrix, method = "split", train = 0.9, given = 5, goodRating = 3)
+train <-getData(esf, "train")
+test <-getData(esf, "unknown")
+test_known <- getData(esf, "known")
+#  building user-based recommendation model
+param_f<- list(normalize = "center", maxiter = 100, k =100)
+final_model <- Recommender(train, method = "SVD", param = param_f)
+final_model
+# getting recommendations (top 10)
+final_prediction<- predict (final_model, test, n = 10, type = "topNList")
+final_prediction@items[1]
+final_prediction@ratings[1]
+```
+
+SVD is faster than collaborative filtering in making predictions. SVD handles the problem of scalability and sparsity posed by CF successfully. However, SVD is not without flaw. The main drawback of SVD is that there is no to little explanation to the reason that we recommend an item to an user. 
+
