@@ -1,0 +1,190 @@
+---
+title: "Project 4"
+author: "Olga Shiligin"
+date: "28/06/2019"
+output: html_document
+---
+
+
+```{r, echo=F, message=F, warning=F, error=F, comment=F}
+library(recommenderlab)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(diverse)
+```
+
+Introduction 
+-------------
+
+The purpose of the project is to compare the accuracy of at least two recommender systems and implement support for at least one business or user experience goal such as increased serendipity, novelty, or diversity. 
+
+The data for the project is taken from the Jester Joke Recommender System and downloaded from http://www.ieor.berkeley.edu/~goldberg/jester-data/. The dataset contains about 24,938 users and 100 jokes, which were rated by users on the scale from -10 to 10. 
+
+
+"recommenderLab" package will be used as a core packge for building a recommender algorithms.
+
+
+```{r}
+#  loading smaller version of Jester Jokes from recommenderlab package
+data(Jester5k)
+dim(Jester5k)
+```
+
+Data Exploration
+-----------------
+
+```{r}
+#  looking at the rating provided by user 1 and 100 for the first 5 jokes
+Jester5k@data[1,1:5]
+Jester5k@data[100, 1:5]
+
+#  checking total number of ratings given by the users
+nratings(Jester5k)
+
+#  overall rating distribution
+hist(getRatings(Jester5k), main = "Distribution Of Ratings", xlim=c(-10, 10), breaks="FD")
+```
+
+```{r}
+#  finding the most/least popular jokes
+ratings_binary<-binarize(Jester5k, minRating = 1)
+ratings_binary
+ratings_sum<-colSums(ratings_binary)
+ratings_sum_df<- data.frame(joke = names(ratings_sum), pratings = ratings_sum)
+
+# the most popular jokes
+head(ratings_sum_df[order(-ratings_sum_df$pratings), ],10)
+# the least popular jokes
+tail(ratings_sum_df[order(-ratings_sum_df$pratings), ],10)
+```
+
+   
+```{r}
+# two normalization techniques are going to be implemented: Centering and Z-score
+data.norm.c<-normalize(Jester5k, method="center")
+data.norm.z<-normalize(Jester5k, method="Z-score")
+
+#  ploting rating distribution for Raw, Normalized and Z-score Normalized Ratings 
+par(mfrow = c(3,1))
+plot(density(getRatings(Jester5k)),main = 'Raw')
+plot(density(getRatings(data.norm.c)),main = 'Normalized')
+plot(density(getRatings(data.norm.z)),main = 'Z-score')
+par(mfrow = c(1,1))
+```
+
+Accuracy Assessment
+-------------------
+
+The following models will be built and evaluated: user-based CF, random and popular. User-based CF model will be built using cosine or pearson similarity method and normalization techniques will be applied.
+
+```{r}
+#  creating evaluation scheme (3-fold CV; everything that is above 1 is considered as a good rating; 5 neighbours will be find for a given user to make recommendation)
+
+set.seed(123)
+es<- evaluationScheme(Jester5k, method = "cross", train = 0.9, given = 5, goodRating = 1, k = 3)
+
+#  creating a list of models
+models <- list(
+  "ubcf_cosine" = list(name = "UBCF", param = list(method = "cosine", normalize = NULL)),
+  "ubcf_pearson" = list(name = "UBCF", param = list(method = "pearson", normalize = NULL)),
+  "ubcf_cosine_center" = list(name = "UBCF", param = list(method = "cosine", normalize = "center")),
+  "ubcf_pearson_center" = list(name = "UBCF", param = list(method = "pearson", normalize = "center")),
+  "ubcf_cosine_z" = list(name = "UBCF", param = list(method = "cosine", normalize = "Z-score")),
+  "ubcf_pearson_z" = list(name = "UBCF", param = list(method = "pearson", normalize = "Z-score")),
+  "random" = list(name = "RANDOM"),
+  "popular" = list(name = "POPULAR")
+)
+
+#  calculating RMSE, MSE, MAE of the models
+results_1<- evaluate(es, models, type = "ratings")
+avg(results_1)
+
+```
+
+The best performing model is "popular" model as it has the lowest RMSE based on average RMSE of 3-folds cross-validation. The worst performing model is "random", it has the largest RMSE.
+
+
+Let's look at the confusion matrix and ROC curve of the models for 5, 10, 15 and 20 recommendations.
+
+```{r}
+#  creating a list of models
+models <- list(
+  "ubcf_cosine" = list(name = "UBCF", param = list(method = "cosine", normalize = NULL)),
+  "ubcf_pearson" = list(name = "UBCF", param = list(method = "pearson", normalize = NULL)),
+  "ubcf_cosine_center" = list(name = "UBCF", param = list(method = "cosine", normalize = "center")),
+  "ubcf_pearson_center" = list(name = "UBCF", param = list(method = "pearson", normalize = "center")),
+  "ubcf_cosine_z" = list(name = "UBCF", param = list(method = "cosine", normalize = "Z-score")),
+  "ubcf_pearson_z" = list(name = "UBCF", param = list(method = "pearson", normalize = "Z-score")),
+  "random" = list(name = "RANDOM"),
+  "popular" = list(name = "POPULAR")
+)
+
+#  calculating confusion matrix for 5, 10, 15 and 20 recommendations.
+results_2<- evaluate(es, models, n=c(5, 10, 15, 20))
+
+#  plotting ROC curve
+plot(results_2, annotate = 1:4, main = "ROC curve")
+
+# plotting precision - recall chart
+plot(results_2, "prec/rec", annotate = 1:4, main = "ROC curve")
+```
+
+From 10 observations and up the "popular" method outperforms others methods and has the the biggest AUC. "Random" model performed significantly worse that others and has the smallest AUC.
+
+
+
+Increasing Diversity
+---------------------
+
+The recommendations that are most accurate according to the standard metrics are sometimes not the recommendations that are most useful to users. Some studies are argue that one of the goals of recommender systems is to provide a user with personalized items and more diverse recommendations result in more opportunities for users to get recommended such items and utilize “long-tail” area. Having diverse recommendations is important as it helps to avoid the popularity bias. Higher diversity however, can come at the expense of accuracy. There is a tradeoff between accuracy and diversity because high accuracy may often be obtained by safely recommending to users the most popular items, which can clearly lead to the reduction in diversity, i.e., less personalized recommendations. Technically we can increase diversity simply by recommending less popular random items, however, the loss of recommendation accuracy in this case can be substantial. 
+
+In order to increase the recommender system diversity and not significantly compromising accuracy, hybrid model will be built. Hybrid MODEL combines UBCF model with RANDOM model. UBCF will be assigned 0.9 weight (keeping it as a core model) and Random model will be assigned 0.1 weight to increase systems's diversity.
+
+
+```{r}
+# splitting data on train and test sets
+esf<- evaluationScheme(Jester5k, method = "split", train = 0.9, given = 5, goodRating = 1)
+train <-getData(esf, "train")
+test <-getData(esf, "unknown")
+test_known <- getData(esf, "known")
+#  building hybrid models: user-based recommendation model with 10 nearest neighbours and random model
+param_f<- list(method = "Pearson", normalize = "center", nn=10)
+recommendations <- HybridRecommender(
+Recommender(train, method = "UBCF", param = param_f),
+Recommender(train, method = "RANDOM"),
+weights = c(.9, .1)
+)
+```
+
+
+```{r}
+#  calculating RMSE of the Hybrid Model
+final_prediction<- predict(recommendations, test_known, type = "ratings")
+acc_h<- calcPredictionAccuracy(final_prediction, test)
+acc_h
+```
+
+As we see accuracy of the hybrid model is slightly worse than accuracy of UBCF (centered with pearson coefficient as a similarity measure), because random model was added which increased the RMSE. As weight of the random model is small RMSE has been increased only slightly.
+
+```{r}
+# getting recommendations (top 10)
+final_prediction<- predict (recommendations, test, n = 10, type = "topNList")
+
+# top 10 jokes for the first user
+final_prediction@items[1]
+
+# ratings of the top 10 jokes for the first user
+final_prediction@ratings[1]
+```
+
+
+Online recommender system evaluation
+------------------------------------
+
+ In an offline setting, recommending most popular items is the best strategy in terms of accuracy, while in a live environment this strategy is most likely the poorest. There are several researches that shows that offline and online evaluations often contradict each other.The obvious lack of predictive power of offline evaluation is the ignorance of human factor. These factors may strongly influence whether users are satisfied with recommendations, regardless of the recommendation’s relevance. 
+ 
+ One of the widely used online recommender system evaluation method is A/B testing. Users are randomly split into two groups and they are offered slightly different experience. These way two different models can be tested and the best model can be selected using certain metrics (which depend on business objectives): click through rate, time spend watching videos, actual purchases etc.
+
+
+
