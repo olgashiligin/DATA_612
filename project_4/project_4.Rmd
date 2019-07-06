@@ -137,7 +137,7 @@ From 10 observations and up the "popular" method outperforms others methods and 
 Increasing Diversity
 ---------------------
 
-The recommendations that are most accurate according to the standard metrics are sometimes not the recommendations that are most useful to users. Some studies are argue that one of the goals of recommender systems is to provide a user with personalized items and more diverse recommendations result in more opportunities for users to get recommended such items and utilize “long-tail” area. Having diverse recommendations is important as it helps to avoid the popularity bias. Higher diversity however, can come at the expense of accuracy. There is a tradeoff between accuracy and diversity because high accuracy may often be obtained by safely recommending to users the most popular items, which can clearly lead to the reduction in diversity, i.e., less personalized recommendations. Technically we can increase diversity simply by recommending less popular random items, however, the loss of recommendation accuracy in this case can be substantial. 
+The recommendations that are most accurate according to the standard metrics are sometimes not the recommendations that are most useful to users. Some studies are argue that one of the goals of recommender systems is to provide a user with personalized items and more diverse recommendations result in more opportunities for users to get recommended such items and utilize “long-tail” area. Having diverse recommendations is important as it helps to avoid the popularity bias. Higher diversity however, can come at the expense of accuracy. There is a tradeoff between accuracy and diversity because high accuracy may often be obtained by safely recommending to users the most popular items, which can clearly lead to the reduction in diversity, i.e., less personalized recommendations. Technically we can increase diversity simply by recommending less popular random items, however, the loss of recommendation accuracy in this case can be substantial and can lead to a bad recommendation. 
 
 In order to increase the recommender system diversity and not significantly compromising accuracy, hybrid model will be built. Hybrid MODEL combines UBCF model with RANDOM model. UBCF will be assigned 0.9 weight (keeping it as a core model) and Random model will be assigned 0.1 weight to increase systems's diversity.
 
@@ -182,9 +182,20 @@ final_prediction@ratings[1]
 Online recommender system evaluation
 ------------------------------------
 
- In an offline setting, recommending most popular items is the best strategy in terms of accuracy, while in a live environment this strategy is most likely the poorest. There are several researches that shows that offline and online evaluations often contradict each other.The obvious lack of predictive power of offline evaluation is the ignorance of human factor. These factors may strongly influence whether users are satisfied with recommendations, regardless of the recommendation’s relevance. 
- 
- One of the widely used online recommender system evaluation method is A/B testing. Users are randomly split into two groups and they are offered slightly different experience. These way two different models can be tested and the best model can be selected using certain metrics (which depend on business objectives): click through rate, time spend watching videos, actual purchases etc.
+ In an offline setting, recommending most popular items is the best strategy in terms of accuracy, while in a live environment this strategy is most likely the poorest. There are several researches that shows that offline and online evaluations often contradict each other. This problem is called "Surrogate Problem". That means that we can not declare victory only assessing recommender system with RMSE, diversity and novelty until we measure the recommender system' impact on real users.
+The obvious lack of predictive power of offline evaluation is the ignorance of human factor. These factors may strongly influence whether users are satisfied with recommendations, regardless of the recommendation’s relevance. 
+
+Several metrics are used for online recommender system evaluation: responsiveness, churn, A/B test, explicit perceived quality test.
+
+Responsiveness is how quickly new user behavior influences the recommendations. The system that have instantanious or complex responsiveness is difficult to maintain and expensive to build. A balance between responsiveness and simplicity is required.
+
+Churn measures how often users' recommendations change, how sensitive the recommender system to a new user behaviour. For example, if user rates a new item does that substantially change his/her recommendations? If yes, the churn score will be high.
+
+Explicit perceived quality test. This test explicitly asks user to rate the recommender system.  In real life users will probably be confused whether they need to assess items or recommendations. In case with perceived quality test it is hard to interpret the data and it requires extra work from the customer without clear pay-off for them.
+
+ One of the widely used and very effective online recommender system evaluation methods is A/B testing. Users are randomly split into groups and each of the group is offered slightly different experience. These way different models can be tested and the best model can be selected using certain metrics such as actual purchases, number of views or other metrics that indicate interest in the recommendation that is been presented.
+
+In general online recommender system evaluation methods help to avoid complexity that adds no value to the recommender system and unlike offline settings these methods assess user behaviour as the ultimate test of recommender system work.
 
 
 
