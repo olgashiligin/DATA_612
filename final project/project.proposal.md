@@ -6,8 +6,8 @@ output: html_document
 ---
 
 
-Dating Recommender System
---------------------------
+Recommender System For Dating Agency
+------------------------------------
 
 The purpose of the project is to build a recommender system for a dating agency which allows dating agency to improve its service for matchmaking between potential couples, with a view toward romance and/or marriage between them.
 Collaborative filtering will be employed as a main method for building recommender system. User-based and item-based approach will be implemented and tuned with different parameters. Advantages of matrix factorization techniques and hybrid models for improving recommendations will be assessed via various evaluation methods.
