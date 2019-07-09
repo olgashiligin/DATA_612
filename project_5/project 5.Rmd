@@ -1,0 +1,128 @@
+---
+title: "Project 5"
+author: "Olga Shiligin"
+date: "06/07/2019"
+output: html_document
+---
+
+Introduction
+------------
+
+The goal of the assignment is to adapt one of the recommendation systems to work with Apache Spark and compare the performance with the previous iteration. The efficiency of the system and the added complexity of using Spark should be considered.
+
+Data set - MovieLense
+Source - https://grouplens.org/datasets/movielens/
+
+ALS model will be build and predictions will be made using RecommenderLab package and Spark.
+
+```{r, echo=F, message=F, warning=F, error=F, comment=F}
+#  loading necessary packages
+library(recommenderlab)  
+library(dplyr)          
+library(tidyr)        
+library(ggplot2)       
+library(sparklyr)
+library(tictoc) 
+```
+
+
+```{r}
+# reading data
+ratings = read.csv("https://raw.githubusercontent.com/olgashiligin/DATA_612/master/project_5/ratings.csv")
+
+# transforming to a wide format
+data<-ratings%>% select (movieId, userId, rating) %>% spread (movieId,rating)
+
+# converting the data set into a real rating matrix
+movie_matrix <- as(as.matrix(data[-c(1)]), "realRatingMatrix")
+```
+
+
+RecommenderLab package
+----------------------
+
+```{r}
+# splitting data on train and test sets
+esf<- evaluationScheme(movie_matrix, method = "split", train = 0.9, given = 5, goodRating = 3)
+train <-getData(esf, "train")
+test <-getData(esf, "unknown")
+test_known <- getData(esf, "known")
+
+#  training ALS model
+tic()
+final_model <- Recommender(train, method = "ALS")
+train_time <- toc(quiet = TRUE)
+
+# making predictions - top 10
+tic()
+final_prediction<- predict (final_model, test, n = 10, type = "topNList")
+predict_time <- toc(quiet = TRUE)
+```
+
+
+Spark
+------
+
+```{r}
+# spark installation
+# spark_install()
+
+# Connection to Spark
+s_con <- spark_connect(master = "local")
+
+# Split for training and testing (75%/25%)
+spark_df <- ratings
+smp_size <- floor(0.75 * nrow(spark_df))
+
+# setting the seed to make the partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(spark_df)), size = smp_size)
+
+train <- spark_df[train_ind, ]
+test <- spark_df[-train_ind, ]
+
+#  moving data frames to Spark
+spark_train <- sdf_copy_to(s_con, train, "train_ratings", overwrite = TRUE)
+spark_test <- sdf_copy_to(s_con, test, "test_ratings", overwrite = TRUE)
+
+```
+
+```{r}
+#  building ALS model
+tic()
+model <- ml_als(spark_train, max_iter = 5, nonnegative = TRUE, rating_col = "rating", user_col = "userId", item_col = "movieId")
+train_time_spark <- toc(quiet = TRUE)
+# predicting ratings
+tic()
+sparkPred<-ml_predict(model, spark_train)
+head(sparkPred)
+predict_time_spark <- toc(quiet = TRUE)
+# top 10 movies recommended for each user
+ml_recommend(model, type = c("item"), n = 10)
+```
+
+```{r}
+# Disconnect
+spark_disconnect(s_con)
+```
+
+Performance Summary
+-------------------
+
+```{r}
+m1<-cbind(train=train_time$toc - train_time$tic, predict = predict_time$toc - predict_time$tic)
+m2<-cbind(train=train_time_spark$toc - train_time_spark$tic, predict = predict_time_spark$toc - predict_time_spark$tic)
+
+summary = rbind(m1, m2)
+rownames(summary) <- c("RecommenderLab","Spark")
+summary
+```
+
+
+Spark performed a little bit worse on the train stage, but significantly outperformed on the stage of making recommendations. Spark implementation is harder, so complexity VS the size of the dataset should be considered. There is no point to implement Spark on small data sets, Spark is necessary when it comes to big data.
+
+
+
+
+
+
